@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
+    "test": "tsx --test src/**/*.test.ts",
     "deploy": "gh-pages -d dist"
   },
   "dependencies": {
@@ -15,14 +16,16 @@
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "@types/node": "^26.6.5",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.2",
     "autoprefixer": "^10.4.19",
     "gh-pages": "^6.1.1",
     "postcss": "^8.4.38",
     "tailwindcss": "^3.4.10",
+    "tsx": "^4.23.15",
     "typescript": "^5.5.3",
-    "vite": "^5.4.3",
-    "@vitejs/plugin-react": "^4.3.2"
+    "vite": "^5.4.3"
   }
 }

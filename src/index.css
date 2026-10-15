@@ -17,15 +17,7 @@
   --button-bg: rgba(255, 255, 255, 0.05);
   --button-hover-bg: rgba(255, 255, 255, 0.3);
 
-  /* SVG Specific */
-  --circle-stroke: #000000;
-  /* Default stroke for dark mode might need adjustment if background is dark, but source uses black stroke. Let's check source again or use white for dark mode? Source styles.css doesn't explicitly style .circle stroke in :root, but JS sets it to black. However, on dark bg #1e1e1e, black stroke is hard to see. Wait, source JS says: .circle { stroke: black; }. Let's see if source has overrides. Source JS hardcodes stroke: black. But maybe the background is light in source? No, source default is Dark Mode #1e1e1e. Black on #1e1e1e is very low contrast. 
-  Actually, looking at source `styles.css`, it defines colors but the JS `circle_renderer.js` sets stroke to white: `path.setAttribute('stroke', 'white');`. 
-  The `tet-circle-app.tsx` generator uses `<style> .circle { stroke: black; }`. 
-  I should use a variable that adapts. 
-  For Dark Mode (bg #1e1e1e), stroke should be Light (e.g., #fcfaff or similar).
-  For Light Mode (bg #fcfaff), stroke should be Dark (e.g., #1e1e1e).
-  */
+  /* SVG Theming */
   --circle-stroke: #fcfaff;
   --tick-stroke: #fcfaff;
   --text-svg: #fcfaff;
@@ -46,7 +38,7 @@ body.light-mode {
   --button-bg: rgba(0, 0, 0, 0.05);
   --button-hover-bg: rgba(0, 0, 0, 0.1);
 
-  /* SVG Specific */
+  /* SVG Theming */
   --circle-stroke: #1e1e1e;
   --tick-stroke: #1e1e1e;
   --text-svg: #1e1e1e;

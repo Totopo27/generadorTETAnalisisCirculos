@@ -1,281 +1,27 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Download, Moon, Sun } from 'lucide-react';
+import { TETSingleCircle } from './components/TETSingleCircle';
+import { TETInversionGrid } from './components/TETInversionGrid';
 
-// TET Circle Generator Class
-interface GeneratorConfig {
-    svgWidth?: number;
-    svgHeight?: number;
-    centerX?: number;
-    centerY?: number;
-    circleRadius?: number;
-    innerCircleRadius?: number;
-    numbersRadius?: number;
-    tickInnerRadius?: number;
-    divisions?: number;
-    fontSize?: number;
-    strokeWidth?: number;
-    tickStrokeWidth?: number;
-    mappingStrokeWidth?: number;
-    mappingOpacity?: number;
-    fixedPointRadius?: number;
-}
-
-class TETCircleGenerator {
-    config: Required<GeneratorConfig>;
-
-    constructor(config: GeneratorConfig = {}) {
-        this.config = {
-            svgWidth: 200,
-            svgHeight: 200,
-            centerX: 100,
-            centerY: 100,
-            circleRadius: 60,
-            innerCircleRadius: 50,
-            numbersRadius: 72,
-            tickInnerRadius: 55,
-            divisions: 19,
-            fontSize: 12,
-            strokeWidth: 1.5,
-            tickStrokeWidth: 0.5,
-            mappingStrokeWidth: 0.8,
-            mappingOpacity: 0.6,
-            fixedPointRadius: 3,
-            ...config
-        } as Required<GeneratorConfig>;
-
-        this.config.fontSize = this.calculateFontSize(this.config.divisions);
-    }
-
-    calculateFontSize(divisions: number): number {
-        if (divisions <= 20) return 12;
-        if (divisions <= 30) return 10;
-        if (divisions <= 40) return 8;
-        if (divisions <= 50) return 7;
-        return 6;
-    }
-
-    generateBaseCircle(divisions: number, title: string | null = null): string {
-        const angleStep = (2 * Math.PI) / divisions;
-        const {
-            svgWidth, svgHeight, centerX, centerY,
-            circleRadius, innerCircleRadius, numbersRadius,
-            tickInnerRadius, strokeWidth, tickStrokeWidth
-        } = this.config;
-
-        this.config.fontSize = this.calculateFontSize(divisions);
-
-        let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${svgWidth}" height="${svgHeight}" viewBox="0 0 ${svgWidth} ${svgHeight}">
-  <defs>
-    <style>
-      .circle { fill: none; stroke: var(--circle-stroke); stroke-width: ${strokeWidth}; }
-      .number { font-family: Arial, sans-serif; font-size: ${this.config.fontSize}px; text-anchor: middle; dominant-baseline: middle; fill: var(--text-svg); }
-      .title { font-family: Arial, sans-serif; font-size: 12px; font-weight: bold; text-anchor: middle; fill: var(--text-svg); }
-      .tick { stroke: var(--tick-stroke); stroke-width: ${tickStrokeWidth}; }
-      .mapping { fill: none; stroke: blue; stroke-width: ${this.config.mappingStrokeWidth}; opacity: ${this.config.mappingOpacity}; }
-      .fixed { fill: red; }
-    </style>
-  </defs>\n`;
-
-        if (title) {
-            svg += `  <text x="${centerX}" y="15" class="title">${title}</text>\n`;
-        }
-
-        svg += `  <g transform="translate(${centerX}, ${centerY})">\n`;
-        svg += `    <circle cx="0" cy="0" r="${circleRadius}" class="circle"/>\n`;
-        svg += `    <circle cx="0" cy="0" r="${innerCircleRadius}" class="circle" stroke-dasharray="2,2" opacity="0.3"/>\n`;
-
-        for (let i = 0; i < divisions; i++) {
-            const angle = -Math.PI / 2 + (i * angleStep);
-
-            const tickX1 = circleRadius * Math.cos(angle);
-            const tickY1 = circleRadius * Math.sin(angle);
-            const tickX2 = tickInnerRadius * Math.cos(angle);
-            const tickY2 = tickInnerRadius * Math.sin(angle);
-
-            const numX = numbersRadius * Math.cos(angle);
-            const numY = numbersRadius * Math.sin(angle);
-
-            svg += `    <line x1="${tickX1.toFixed(2)}" y1="${tickY1.toFixed(2)}" x2="${tickX2.toFixed(2)}" y2="${tickY2.toFixed(2)}" class="tick"/>\n`;
-            svg += `    <text x="${numX.toFixed(2)}" y="${numY.toFixed(2)}" class="number">${i}</text>\n`;
-        }
-
-        svg += `  </g>\n`;
-
-        const stepAngle = 360 / divisions;
-        svg += `  <text x="${centerX}" y="${svgHeight - 10}" class="title" font-size="10">Step: 360°/${divisions} ≈ ${stepAngle.toFixed(3)}°</text>\n`;
-
-        svg += `</svg>`;
-
-        return svg;
-    }
-
-    generateInversionCircle(divisions: number, indexSum: number, title: string | null = null): string {
-        let svg = this.generateBaseCircle(divisions, title || `${divisions}-TET - Index Sum = ${indexSum}`);
-        svg = svg.replace('  </g>\n  <text x=', this.generateMappings(divisions, indexSum) + '  </g>\n  <text x=');
-        return svg;
-    }
-
-    generateMappings(divisions: number, indexSum: number): string {
-        const angleStep = (2 * Math.PI) / divisions;
-        const { circleRadius } = this.config;
-        let mappings = `    <!-- Mapping lines for Index Sum = ${indexSum} -->\n`;
-
-        const mapped = new Set<number>();
-
-        for (let i = 0; i < divisions; i++) {
-            if (mapped.has(i)) continue;
-
-            let partner = (indexSum - i + divisions) % divisions;
-
-            if (partner === i) {
-                const angle = -Math.PI / 2 + (i * angleStep);
-                const x = circleRadius * Math.cos(angle);
-                const y = circleRadius * Math.sin(angle);
-                mappings += `    <circle cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="${this.config.fixedPointRadius}" class="fixed"/>\n`;
-            } else if (!mapped.has(partner)) {
-                const angle1 = -Math.PI / 2 + (i * angleStep);
-                const angle2 = -Math.PI / 2 + (partner * angleStep);
-
-                const x1 = circleRadius * Math.cos(angle1);
-                const y1 = circleRadius * Math.sin(angle1);
-                const x2 = circleRadius * Math.cos(angle2);
-                const y2 = circleRadius * Math.sin(angle2);
-
-                const curvature = this.calculateCurvature(i, partner, divisions);
-
-                mappings += `    <path d="M ${x1.toFixed(2)},${y1.toFixed(2)} Q ${curvature.cx.toFixed(2)},${curvature.cy.toFixed(2)} ${x2.toFixed(2)},${y2.toFixed(2)}" class="mapping"/>\n`;
-
-                mapped.add(i);
-                mapped.add(partner);
-            }
-        }
-
-        return mappings;
-    }
-
-    calculateCurvature(i: number, partner: number, divisions: number): { cx: number, cy: number } {
-        const angleStep = (2 * Math.PI) / divisions;
-        const angle1 = -Math.PI / 2 + (i * angleStep);
-        const angle2 = -Math.PI / 2 + (partner * angleStep);
-
-        let angularDist = Math.abs(partner - i);
-        if (angularDist > divisions / 2) {
-            angularDist = divisions - angularDist;
-        }
-
-        const normalizedDist = angularDist / (divisions / 2);
-        const curvatureFactor = (1 - normalizedDist) * 0.6;
-
-        const midAngle = (angle1 + angle2) / 2;
-        const controlRadius = this.config.circleRadius * curvatureFactor;
-
-        return {
-            cx: controlRadius * Math.cos(midAngle),
-            cy: controlRadius * Math.sin(midAngle)
-        };
-    }
-
-    generateInversionPage(divisions: number, startIndex: number = 0, endIndex: number | null = null, circlesPerRow: number = 7): string {
-        if (endIndex === null) {
-            endIndex = divisions - 1;
-        }
-
-        const numCircles = endIndex - startIndex + 1;
-        const numRows = Math.ceil(numCircles / circlesPerRow);
-
-        const circleSpacing = 157;
-        const pageWidth = 1100;
-        const pageHeight = 850;
-
-        let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${pageWidth}" height="${pageHeight}" viewBox="0 0 ${pageWidth} ${pageHeight}">
-  <defs>
-    <style>
-      .circle { fill: none; stroke: var(--circle-stroke); stroke-width: 1.5; }
-      .number { font-family: Arial, sans-serif; font-size: ${this.calculateFontSize(divisions)}px; text-anchor: middle; dominant-baseline: middle; fill: var(--text-svg); }
-      .title { font-family: Arial, sans-serif; font-size: 10px; font-weight: bold; text-anchor: middle; fill: var(--text-svg); }
-      .page-title { font-family: Arial, sans-serif; font-size: 14px; font-weight: bold; text-anchor: middle; fill: var(--text-svg); }
-      .tick { stroke: var(--tick-stroke); stroke-width: 0.5; }
-      .mapping { fill: none; stroke: blue; stroke-width: 0.8; opacity: 0.6; }
-      .fixed { fill: red; }
-    </style>
-  </defs>\n`;
-
-        svg += `  <text x="${pageWidth / 2}" y="25" class="page-title">${divisions}-TET Inversions (I_xy)</text>\n`;
-
-        let circleIndex = 0;
-        for (let row = 0; row < numRows; row++) {
-            const circlesInThisRow = Math.min(circlesPerRow, numCircles - (row * circlesPerRow));
-            const rowStartX = (pageWidth - (circlesInThisRow * circleSpacing)) / 2 + circleSpacing / 2;
-
-            for (let col = 0; col < circlesInThisRow; col++) {
-                const indexSum = startIndex + circleIndex;
-                if (indexSum > endIndex) break;
-
-                const x = rowStartX + (col * circleSpacing);
-                const y = 140 + (row * 200);
-
-                const tempGen = new TETCircleGenerator({
-                    ...this.config,
-                    svgWidth: 150,
-                    svgHeight: 150,
-                    centerX: 0,
-                    centerY: 0,
-                    circleRadius: 50,
-                    innerCircleRadius: 42,
-                    numbersRadius: 60,
-                    tickInnerRadius: 46
-                });
-
-                svg += `  <g transform="translate(${x}, ${y})">\n`;
-                svg += `    <text x="0" y="-75" class="title">Index Sum = ${indexSum}</text>\n`;
-                svg += tempGen.generateMappings(divisions, indexSum);
-
-                const angleStep = (2 * Math.PI) / divisions;
-                svg += `    <circle cx="0" cy="0" r="50" class="circle"/>\n`;
-                svg += `    <circle cx="0" cy="0" r="42" class="circle" stroke-dasharray="2,2" opacity="0.3"/>\n`;
-
-                for (let i = 0; i < divisions; i++) {
-                    const angle = -Math.PI / 2 + (i * angleStep);
-                    const tickX1 = 50 * Math.cos(angle);
-                    const tickY1 = 50 * Math.sin(angle);
-                    const tickX2 = 46 * Math.cos(angle);
-                    const tickY2 = 46 * Math.sin(angle);
-                    const numX = 60 * Math.cos(angle);
-                    const numY = 60 * Math.sin(angle);
-
-                    svg += `    <line x1="${tickX1.toFixed(2)}" y1="${tickY1.toFixed(2)}" x2="${tickX2.toFixed(2)}" y2="${tickY2.toFixed(2)}" class="tick"/>\n`;
-                    svg += `    <text x="${numX.toFixed(2)}" y="${numY.toFixed(2)}" class="number">${i}</text>\n`;
-                }
-
-                svg += `  </g>\n`;
-                circleIndex++;
-            }
-        }
-
-        svg += `</svg>`;
-        return svg;
-    }
-}
-
-// React Component
 export default function TETCircleApp() {
-    const [mode, setMode] = useState('single');
-    const [divisions, setDivisions] = useState(19);
-    const [indexSum, setIndexSum] = useState(0);
-    const [showInversion, setShowInversion] = useState(false);
-    const [startIndex, setStartIndex] = useState(0);
-    const [endIndex, setEndIndex] = useState(6);
-    const [circlesPerRow, setCirclesPerRow] = useState(7);
-    const [svgContent, setSvgContent] = useState('');
-    const [theme, setTheme] = useState(() => {
+    const [mode, setMode] = useState<'single' | 'multiple'>('single');
+    const [divisions, setDivisions] = useState<number>(19);
+    const [indexSum, setIndexSum] = useState<number>(0);
+    const [showInversion, setShowInversion] = useState<boolean>(false);
+    const [startIndex, setStartIndex] = useState<number>(0);
+    const [endIndex, setEndIndex] = useState<number>(6);
+    const [circlesPerRow, setCirclesPerRow] = useState<number>(7);
+
+    const [theme, setTheme] = useState<'dark' | 'light'>(() => {
         if (typeof window !== 'undefined') {
-            return localStorage.getItem('theme') || 'dark';
+            return (localStorage.getItem('theme') as 'dark' | 'light') || 'dark';
         }
         return 'dark';
     });
 
-    const generator = new TETCircleGenerator();
+    const svgRef = useRef<SVGSVGElement>(null);
 
+    // Sincronizar tema con body y localStorage
     useEffect(() => {
         const root = window.document.body;
         if (theme === 'light') {
@@ -286,203 +32,242 @@ export default function TETCircleApp() {
         localStorage.setItem('theme', theme);
     }, [theme]);
 
+    // Blindaje de estado: clampear índices cuando cambia divisions
     useEffect(() => {
-        generateSVG();
-    }, [mode, divisions, indexSum, showInversion, startIndex, endIndex, circlesPerRow, theme]);
+        setIndexSum(prev => Math.min(prev, Math.max(0, divisions - 1)));
+        setStartIndex(prev => Math.min(prev, Math.max(0, divisions - 1)));
+        setEndIndex(prev => {
+            const clamped = Math.min(prev, Math.max(0, divisions - 1));
+            return Math.max(clamped, startIndex);
+        });
+    }, [divisions]);
 
     const toggleTheme = () => {
-        setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+        setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
     };
 
-    const generateSVG = () => {
-        let svg = '';
-        if (mode === 'single') {
-            if (showInversion) {
-                svg = generator.generateInversionCircle(divisions, indexSum);
-            } else {
-                svg = generator.generateBaseCircle(divisions, `${divisions}-TET Circle`);
-            }
-        } else {
-            svg = generator.generateInversionPage(divisions, startIndex, endIndex, circlesPerRow);
-        }
-        setSvgContent(svg);
-    };
-
+    // Descarga nativa y limpia del SVG usando XMLSerializer (sin inyecciones de strings)
     const downloadSVG = () => {
-        const blob = new Blob([svgContent], { type: 'image/svg+xml' });
+        if (!svgRef.current) return;
+        const serializer = new XMLSerializer();
+        const source = serializer.serializeToString(svgRef.current);
+        const blob = new Blob([source], { type: 'image/svg+xml;charset=utf-8' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `${divisions}-TET-${mode}.svg`;
+        a.download = `${divisions}-TET-${mode}${mode === 'single' && showInversion ? `-sum-${indexSum}` : ''}.svg`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
     };
 
+    const handleDivisionsChange = (val: number) => {
+        const clamped = Math.min(72, Math.max(3, isNaN(val) ? 3 : val));
+        setDivisions(clamped);
+    };
+
     return (
-        <div className="min-h-screen bg-main text-text-main p-8 transition-colors duration-300">
+        <div className="min-h-screen bg-main text-text-main p-4 md:p-8 transition-colors duration-300">
             <div className="max-w-7xl mx-auto">
+                {/* Header */}
                 <div className="flex justify-between items-center mb-8">
-                    <h1 className="text-4xl font-bold text-accent">
-                        Generador de Círculos TET
-                    </h1>
+                    <div>
+                        <h1 className="text-3xl md:text-4xl font-bold text-accent">
+                            Generador de Círculos TET
+                        </h1>
+                        <p className="text-sm opacity-80 mt-1">
+                            Análisis de simetrías, suma de índices y mapas de inversión en temperamentos iguales
+                        </p>
+                    </div>
                     <button
                         onClick={toggleTheme}
-                        className="p-2 rounded-full bg-button-bg hover:bg-button-hover-bg text-accent transition-all"
-                        aria-label="Toggle theme"
+                        className="p-3 rounded-full bg-button-bg hover:bg-button-hover-bg text-accent transition-all border border-accent shadow-sm"
+                        aria-label="Alternar tema claro/oscuro"
                     >
-                        {theme === 'dark' ? <Sun size={24} /> : <Moon size={24} />}
+                        {theme === 'dark' ? <Sun size={22} /> : <Moon size={22} />}
                     </button>
                 </div>
 
-                <div className="bg-panel-bg backdrop-blur-md rounded-lg shadow-lg p-6 mb-6 border border-accent">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {/* Mode Selection */}
+                {/* Panel de Configuración */}
+                <div className="bg-panel-bg backdrop-blur-md rounded-xl shadow-xl p-6 mb-8 border border-accent">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {/* Selector de modo */}
                         <div>
                             <label className="block text-sm font-semibold mb-2 text-text-main">
                                 Modo de Visualización
                             </label>
-                            <div className="flex gap-4">
+                            <div className="flex gap-3">
                                 <button
                                     onClick={() => setMode('single')}
-                                    className={`px-4 py-2 rounded-lg font-medium transition-colors ${mode === 'single'
-                                        ? 'bg-accent text-white'
-                                        : 'bg-button-bg text-text-main hover:bg-button-hover-bg'
-                                        }`}
+                                    className={`flex-1 px-4 py-2.5 rounded-lg font-medium transition-all ${
+                                        mode === 'single'
+                                            ? 'bg-accent text-white shadow-md'
+                                            : 'bg-button-bg text-text-main hover:bg-button-hover-bg border border-accent/30'
+                                    }`}
                                 >
                                     Círculo Individual
                                 </button>
                                 <button
                                     onClick={() => setMode('multiple')}
-                                    className={`px-4 py-2 rounded-lg font-medium transition-colors ${mode === 'multiple'
-                                        ? 'bg-accent text-white'
-                                        : 'bg-button-bg text-text-main hover:bg-button-hover-bg'
-                                        }`}
+                                    className={`flex-1 px-4 py-2.5 rounded-lg font-medium transition-all ${
+                                        mode === 'multiple'
+                                            ? 'bg-accent text-white shadow-md'
+                                            : 'bg-button-bg text-text-main hover:bg-button-hover-bg border border-accent/30'
+                                    }`}
                                 >
                                     Página Múltiple
                                 </button>
                             </div>
                         </div>
 
-                        {/* Divisions */}
+                        {/* Selector de divisiones n-TET */}
                         <div>
-                            <label className="block text-sm font-semibold mb-2 text-text-main">
-                                Divisiones (n-TET): {divisions}
-                            </label>
+                            <div className="flex justify-between items-center mb-2">
+                                <label className="text-sm font-semibold text-text-main">
+                                    Divisiones (n-TET): <span className="text-accent">{divisions}</span>
+                                </label>
+                                <span className="text-xs opacity-75">3 a 72</span>
+                            </div>
                             <input
                                 type="range"
                                 min="3"
                                 max="72"
                                 value={divisions}
-                                onChange={(e) => setDivisions(parseInt(e.target.value))}
-                                className="w-full accent-accent"
+                                onChange={e => handleDivisionsChange(parseInt(e.target.value, 10))}
+                                className="w-full accent-accent cursor-pointer"
                             />
                             <input
                                 type="number"
                                 min="3"
                                 max="72"
                                 value={divisions}
-                                onChange={(e) => setDivisions(parseInt(e.target.value))}
-                                className="mt-2 w-full px-3 py-2 border border-accent rounded-lg bg-input-bg text-input-text"
+                                onChange={e => handleDivisionsChange(parseInt(e.target.value, 10))}
+                                className="mt-2 w-full px-3 py-1.5 border border-accent rounded-lg bg-input-bg text-input-text font-semibold text-center"
                             />
                         </div>
 
+                        {/* Controles para modo individual */}
                         {mode === 'single' && (
-                            <>
-                                <div>
-                                    <label className="flex items-center space-x-2 cursor-pointer">
-                                        <input
-                                            type="checkbox"
-                                            checked={showInversion}
-                                            onChange={(e) => setShowInversion(e.target.checked)}
-                                            className="w-5 h-5 accent-accent"
-                                        />
-                                        <span className="text-sm font-semibold text-text-main">
-                                            Mostrar Inversión
-                                        </span>
-                                    </label>
-                                </div>
+                            <div className="flex flex-col justify-center space-y-3">
+                                <label className="flex items-center space-x-3 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={showInversion}
+                                        onChange={e => setShowInversion(e.target.checked)}
+                                        className="w-5 h-5 accent-accent rounded cursor-pointer"
+                                    />
+                                    <span className="text-sm font-semibold text-text-main select-none">
+                                        Mostrar Mapeo de Inversión
+                                    </span>
+                                </label>
 
                                 {showInversion && (
                                     <div>
-                                        <label className="block text-sm font-semibold mb-2 text-text-main">
-                                            Suma de Índices: {indexSum}
-                                        </label>
+                                        <div className="flex justify-between text-xs font-semibold mb-1">
+                                            <span>Suma de Índices (I_xy):</span>
+                                            <span className="text-accent">{indexSum}</span>
+                                        </div>
                                         <input
                                             type="range"
                                             min="0"
-                                            max={divisions - 1}
+                                            max={Math.max(0, divisions - 1)}
                                             value={indexSum}
-                                            onChange={(e) => setIndexSum(parseInt(e.target.value))}
-                                            className="w-full accent-accent"
+                                            onChange={e => setIndexSum(parseInt(e.target.value, 10))}
+                                            className="w-full accent-accent cursor-pointer"
                                         />
                                     </div>
                                 )}
-                            </>
+                            </div>
                         )}
 
+                        {/* Controles para modo múltiple */}
                         {mode === 'multiple' && (
                             <>
                                 <div>
-                                    <label className="block text-sm font-semibold mb-2 text-text-main">
-                                        Índice Inicial: {startIndex}
-                                    </label>
-                                    <input
-                                        type="range"
-                                        min="0"
-                                        max={divisions - 1}
-                                        value={startIndex}
-                                        onChange={(e) => setStartIndex(parseInt(e.target.value))}
-                                        className="w-full accent-accent"
-                                    />
+                                    <div className="flex justify-between text-xs font-semibold mb-1">
+                                        <span>Rango de Suma:</span>
+                                        <span className="text-accent">{startIndex} a {endIndex}</span>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <div>
+                                            <span className="text-[11px] opacity-75">Inicio</span>
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                max={endIndex}
+                                                value={startIndex}
+                                                onChange={e => setStartIndex(Math.max(0, Math.min(parseInt(e.target.value, 10) || 0, endIndex)))}
+                                                className="w-full px-2 py-1 border border-accent rounded bg-input-bg text-input-text text-center text-sm"
+                                            />
+                                        </div>
+                                        <div>
+                                            <span className="text-[11px] opacity-75">Fin</span>
+                                            <input
+                                                type="number"
+                                                min={startIndex}
+                                                max={divisions - 1}
+                                                value={endIndex}
+                                                onChange={e => setEndIndex(Math.min(divisions - 1, Math.max(parseInt(e.target.value, 10) || 0, startIndex)))}
+                                                className="w-full px-2 py-1 border border-accent rounded bg-input-bg text-input-text text-center text-sm"
+                                            />
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-semibold mb-2 text-text-main">
-                                        Índice Final: {endIndex}
-                                    </label>
-                                    <input
-                                        type="range"
-                                        min={startIndex}
-                                        max={divisions - 1}
-                                        value={endIndex}
-                                        onChange={(e) => setEndIndex(parseInt(e.target.value))}
-                                        className="w-full accent-accent"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-semibold mb-2 text-text-main">
-                                        Círculos por Fila: {circlesPerRow}
-                                    </label>
+                                    <div className="flex justify-between text-xs font-semibold mb-1">
+                                        <span>Círculos por fila:</span>
+                                        <span className="text-accent">{circlesPerRow}</span>
+                                    </div>
                                     <input
                                         type="range"
                                         min="3"
                                         max="10"
                                         value={circlesPerRow}
-                                        onChange={(e) => setCirclesPerRow(parseInt(e.target.value))}
-                                        className="w-full accent-accent"
+                                        onChange={e => setCirclesPerRow(parseInt(e.target.value, 10))}
+                                        className="w-full accent-accent cursor-pointer"
                                     />
                                 </div>
                             </>
                         )}
                     </div>
 
+                    {/* Botón de Descarga */}
                     <button
                         onClick={downloadSVG}
-                        className="mt-6 w-full bg-accent hover:bg-accent-hover text-white font-semibold py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition-colors shadow-lg"
+                        className="mt-6 w-full md:w-auto md:min-w-[240px] bg-accent hover:bg-accent-hover text-white font-semibold py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition-all shadow-lg active:scale-[0.99]"
                     >
                         <Download size={20} />
-                        Descargar SVG
+                        Descargar SVG Vectorial
                     </button>
                 </div>
 
-                <div className="bg-panel-bg backdrop-blur-md rounded-lg shadow-lg p-6 overflow-auto border border-accent">
-                    <div
-                        className="flex justify-center"
-                        dangerouslySetInnerHTML={{ __html: svgContent }}
-                    />
+                {/* Área de Visualización Vectorial React Nativa */}
+                <div className="bg-panel-bg backdrop-blur-md rounded-xl shadow-xl p-6 overflow-auto border border-accent flex justify-center items-center min-h-[500px]">
+                    {mode === 'single' ? (
+                        <TETSingleCircle
+                            svgRef={svgRef}
+                            divisions={divisions}
+                            indexSum={indexSum}
+                            showInversion={showInversion}
+                            title={`${divisions}-TET ${showInversion ? `(Inversión Suma = ${indexSum})` : 'Círculo Base'}`}
+                            width={520}
+                            height={520}
+                            circleRadius={160}
+                            innerCircleRadius={135}
+                            numbersRadius={195}
+                            tickInnerRadius={148}
+                        />
+                    ) : (
+                        <TETInversionGrid
+                            svgRef={svgRef}
+                            divisions={divisions}
+                            startIndex={startIndex}
+                            endIndex={endIndex}
+                            circlesPerRow={circlesPerRow}
+                        />
+                    )}
                 </div>
             </div>
         </div>
