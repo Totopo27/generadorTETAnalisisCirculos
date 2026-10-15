@@ -6,6 +6,7 @@ export interface TETInversionGridProps {
     startIndex: number;
     endIndex: number;
     circlesPerRow?: number;
+    theme?: 'dark' | 'light';
     svgRef?: React.Ref<SVGSVGElement>;
 }
 
@@ -14,23 +15,42 @@ export const TETInversionGrid: React.FC<TETInversionGridProps> = ({
     startIndex,
     endIndex,
     circlesPerRow = 7,
+    theme = 'dark',
     svgRef
 }) => {
     const numCircles = Math.max(0, endIndex - startIndex + 1);
     const numRows = Math.ceil(numCircles / circlesPerRow);
 
-    const circleRadius = 45;
-    const innerCircleRadius = 38;
-    const tickInnerRadius = 41;
-    const numbersRadius = 55;
-    const circleSpacing = 150;
-    const rowSpacing = 185;
+    const circleRadius = 58;
+    const innerCircleRadius = 48;
+    const tickInnerRadius = 52;
+    const numbersRadius = 72;
+    const circleSpacing = 210;
+    const rowSpacing = 230;
+    const startY = 170;
 
-    const pageWidth = Math.max(800, circlesPerRow * circleSpacing + 80);
-    const pageHeight = Math.max(500, 110 + numRows * rowSpacing);
+    const pageWidth = Math.max(960, circlesPerRow * circleSpacing + 80);
+    const pageHeight = Math.max(540, startY + numRows * rowSpacing + 30);
+
+    const isDark = theme === 'dark';
+    const bgFill = isDark ? '#1e1e1e' : '#ffffff';
+    const textFill = isDark ? '#fcfaff' : '#111827';
+    const circleStroke = isDark ? '#fcfaff' : '#111827';
+    const tickStroke = isDark ? '#fcfaff' : '#374151';
 
     const angleStep = (2 * Math.PI) / divisions;
-    const fontSize = calculateFontSize(divisions) * 0.95;
+
+    // Escala tipográfica adaptativa fina para que los números no se amontonen en 36+, 41+ y 53+ TET
+    let fontSize = 7.5;
+    if (divisions > 50) {
+        fontSize = 5.2;
+    } else if (divisions > 35) {
+        fontSize = 6.2;
+    } else if (divisions > 24) {
+        fontSize = 7.0;
+    } else {
+        fontSize = calculateFontSize(divisions) * 0.85;
+    }
 
     return (
         <svg
@@ -39,22 +59,26 @@ export const TETInversionGrid: React.FC<TETInversionGridProps> = ({
             width={pageWidth}
             height={pageHeight}
             viewBox={`0 0 ${pageWidth} ${pageHeight}`}
-            className="overflow-visible select-none"
+            className="overflow-visible select-none rounded-xl"
         >
             <defs>
                 <style>{`
-                    .grid-circle { fill: none; stroke: var(--circle-stroke, #fcfaff); stroke-width: 1.5; }
-                    .grid-circle-dashed { fill: none; stroke: var(--circle-stroke, #fcfaff); stroke-width: 1; stroke-dasharray: 2,2; opacity: 0.3; }
-                    .grid-tick { stroke: var(--tick-stroke, #fcfaff); stroke-width: 0.7; }
-                    .grid-number { font-family: 'Segoe UI', system-ui, sans-serif; font-size: ${fontSize}px; text-anchor: middle; dominant-baseline: middle; fill: var(--text-svg, #fcfaff); }
-                    .grid-title { font-family: 'Segoe UI', system-ui, sans-serif; font-size: 11px; font-weight: bold; text-anchor: middle; fill: var(--text-svg, #fcfaff); }
-                    .grid-page-title { font-family: 'Segoe UI', system-ui, sans-serif; font-size: 18px; font-weight: bold; text-anchor: middle; fill: var(--text-svg, #fcfaff); }
-                    .grid-mapping { fill: none; stroke: #3b82f6; stroke-width: 1; opacity: 0.75; }
-                    .grid-fixed { fill: #ef4444; stroke: #ffffff; stroke-width: 1; }
+                    .grid-circle { fill: none; stroke: ${circleStroke}; stroke-width: 1.5; }
+                    .grid-circle-dashed { fill: none; stroke: ${circleStroke}; stroke-width: 1; stroke-dasharray: 2,2; opacity: 0.35; }
+                    .grid-tick { stroke: ${tickStroke}; stroke-width: 0.8; }
+                    .grid-number { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; font-size: ${fontSize}px; text-anchor: middle; dominant-baseline: middle; fill: ${textFill}; font-weight: 500; }
+                    .grid-title { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; font-size: 13px; font-weight: bold; text-anchor: middle; fill: ${textFill}; }
+                    .grid-page-title { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; font-size: 20px; font-weight: bold; text-anchor: middle; fill: ${textFill}; }
+                    .grid-mapping { fill: none; stroke: #3b82f6; stroke-width: 1.2; opacity: 0.8; }
+                    .grid-fixed { fill: #ef4444; stroke: ${isDark ? '#ffffff' : '#1e1e1e'}; stroke-width: 1; }
                 `}</style>
             </defs>
 
-            <text x={pageWidth / 2} y={35} className="grid-page-title">
+            {/* Fondo sólido explícito para que el SVG descargado nunca salga en blanco */}
+            <rect width="100%" height="100%" fill={bgFill} rx="12" />
+
+            {/* Título de la página principal (con margen amplio) */}
+            <text x={pageWidth / 2} y={45} className="grid-page-title">
                 {divisions}-TET: Inversiones Simétricas (Suma de Índices)
             </text>
 
@@ -67,17 +91,18 @@ export const TETInversionGrid: React.FC<TETInversionGridProps> = ({
                 const rowStartX = (pageWidth - circlesInThisRow * circleSpacing) / 2 + circleSpacing / 2;
 
                 const x = rowStartX + col * circleSpacing;
-                const y = 110 + row * rowSpacing;
+                const y = startY + row * rowSpacing;
 
                 const { pairs, fixedPoints } = getInversionPairs(divisions, indexSum);
 
                 return (
                     <g key={`inversion-${indexSum}`} transform={`translate(${x}, ${y})`}>
-                        <text x={0} y={-68} className="grid-title">
+                        {/* Título de cada círculo individual (con margen de 85px respecto al centro) */}
+                        <text x={0} y={-85} className="grid-title">
                             Suma = {indexSum}
                         </text>
 
-                        {/* Mapeos */}
+                        {/* Mapeos de inversión */}
                         {pairs.map(([i, partner]) => {
                             const angle1 = -Math.PI / 2 + i * angleStep;
                             const angle2 = -Math.PI / 2 + partner * angleStep;
@@ -96,7 +121,7 @@ export const TETInversionGrid: React.FC<TETInversionGridProps> = ({
                             );
                         })}
 
-                        {/* Puntos fijos */}
+                        {/* Puntos fijos de inversión */}
                         {fixedPoints.map(point => {
                             const angle = -Math.PI / 2 + point * angleStep;
                             const px = circleRadius * Math.cos(angle);

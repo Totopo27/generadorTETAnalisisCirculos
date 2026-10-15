@@ -251,9 +251,10 @@ export default function TETCircleApp() {
                             divisions={divisions}
                             indexSum={indexSum}
                             showInversion={showInversion}
+                            theme={theme}
                             title={`${divisions}-TET ${showInversion ? `(Inversión Suma = ${indexSum})` : 'Círculo Base'}`}
-                            width={520}
-                            height={520}
+                            width={540}
+                            height={540}
                             circleRadius={160}
                             innerCircleRadius={135}
                             numbersRadius={195}
@@ -266,6 +267,7 @@ export default function TETCircleApp() {
                             startIndex={startIndex}
                             endIndex={endIndex}
                             circlesPerRow={circlesPerRow}
+                            theme={theme}
                         />
                     )}
                 </div>

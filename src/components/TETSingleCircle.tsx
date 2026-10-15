@@ -12,6 +12,7 @@ export interface TETSingleCircleProps {
     innerCircleRadius?: number;
     numbersRadius?: number;
     tickInnerRadius?: number;
+    theme?: 'dark' | 'light';
     svgRef?: React.Ref<SVGSVGElement>;
 }
 
@@ -20,19 +21,26 @@ export const TETSingleCircle: React.FC<TETSingleCircleProps> = ({
     indexSum = 0,
     showInversion = false,
     title,
-    width = 400,
-    height = 400,
-    circleRadius = 120,
-    innerCircleRadius = 100,
-    numbersRadius = 145,
-    tickInnerRadius = 110,
+    width = 540,
+    height = 540,
+    circleRadius = 160,
+    innerCircleRadius = 135,
+    numbersRadius = 195,
+    tickInnerRadius = 148,
+    theme = 'dark',
     svgRef
 }) => {
     const centerX = width / 2;
     const centerY = height / 2;
     const angleStep = (2 * Math.PI) / divisions;
-    const fontSize = calculateFontSize(divisions) * (width / 200);
+    const fontSize = calculateFontSize(divisions) * 1.55;
     const stepAngle = 360 / divisions;
+
+    const isDark = theme === 'dark';
+    const bgFill = isDark ? '#1e1e1e' : '#ffffff';
+    const textFill = isDark ? '#fcfaff' : '#111827';
+    const circleStroke = isDark ? '#fcfaff' : '#111827';
+    const tickStroke = isDark ? '#fcfaff' : '#374151';
 
     const { pairs, fixedPoints } = showInversion
         ? getInversionPairs(divisions, indexSum)
@@ -45,24 +53,27 @@ export const TETSingleCircle: React.FC<TETSingleCircleProps> = ({
             width={width}
             height={height}
             viewBox={`0 0 ${width} ${height}`}
-            className="overflow-visible select-none"
+            className="overflow-visible select-none rounded-xl"
         >
             <defs>
                 <style>{`
-                    .tet-circle { fill: none; stroke: var(--circle-stroke, #fcfaff); stroke-width: 2; }
-                    .tet-circle-dashed { fill: none; stroke: var(--circle-stroke, #fcfaff); stroke-width: 1.5; stroke-dasharray: 4,4; opacity: 0.35; }
-                    .tet-tick { stroke: var(--tick-stroke, #fcfaff); stroke-width: 1; }
-                    .tet-number { font-family: 'Segoe UI', system-ui, sans-serif; font-size: ${fontSize}px; text-anchor: middle; dominant-baseline: middle; fill: var(--text-svg, #fcfaff); font-weight: 600; }
-                    .tet-title { font-family: 'Segoe UI', system-ui, sans-serif; font-size: 14px; font-weight: bold; text-anchor: middle; fill: var(--text-svg, #fcfaff); }
-                    .tet-subtitle { font-family: 'Segoe UI', system-ui, sans-serif; font-size: 11px; text-anchor: middle; fill: var(--text-svg, #fcfaff); opacity: 0.8; }
-                    .tet-mapping { fill: none; stroke: #3b82f6; stroke-width: 1.8; opacity: 0.75; }
-                    .tet-fixed { fill: #ef4444; stroke: #ffffff; stroke-width: 1.5; }
+                    .tet-circle { fill: none; stroke: ${circleStroke}; stroke-width: 2; }
+                    .tet-circle-dashed { fill: none; stroke: ${circleStroke}; stroke-width: 1.5; stroke-dasharray: 4,4; opacity: 0.35; }
+                    .tet-tick { stroke: ${tickStroke}; stroke-width: 1.2; }
+                    .tet-number { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; font-size: ${fontSize}px; text-anchor: middle; dominant-baseline: middle; fill: ${textFill}; font-weight: 600; }
+                    .tet-title { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; font-size: 16px; font-weight: bold; text-anchor: middle; fill: ${textFill}; }
+                    .tet-subtitle { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; font-size: 12px; text-anchor: middle; fill: ${textFill}; opacity: 0.8; }
+                    .tet-mapping { fill: none; stroke: #3b82f6; stroke-width: 2.2; opacity: 0.85; }
+                    .tet-fixed { fill: #ef4444; stroke: ${isDark ? '#ffffff' : '#1e1e1e'}; stroke-width: 1.5; }
                 `}</style>
             </defs>
 
+            {/* Fondo sólido explícito para que el SVG descargado nunca salga en blanco */}
+            <rect width="100%" height="100%" fill={bgFill} rx="12" />
+
             {/* Título superior */}
             {title && (
-                <text x={centerX} y={25} className="tet-title">
+                <text x={centerX} y={35} className="tet-title">
                     {title}
                 </text>
             )}
@@ -142,7 +153,7 @@ export const TETSingleCircle: React.FC<TETSingleCircleProps> = ({
             </g>
 
             {/* Leyenda inferior */}
-            <text x={centerX} y={height - 15} className="tet-subtitle">
+            <text x={centerX} y={height - 20} className="tet-subtitle">
                 Paso: 360°/{divisions} ≈ {stepAngle.toFixed(3)}°
             </text>
         </svg>
